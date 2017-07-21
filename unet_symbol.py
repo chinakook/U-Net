@@ -54,14 +54,14 @@ def unet_base():
     u2 = up_block(u3, d2, 256)
     u1 = up_block(u2, d1, 128)
     u0 = up_block(u1, d0, 64)
-    conv_res = nn.Conv2D(2, 1)(u0)
+    conv_res = nn.Conv2D(2, 1, name='conv_res')(u0)
 
     return conv_res, label
 
 # Standard unet with ground truth label image
 def unet_standard():
     conv_res, label = unet_base()
-    return mx.sym.SoftmaxOutput(conv_res, label, multi_output=True)
+    return mx.sym.SoftmaxOutput(conv_res, label, multi_output=True, name='pred')
 
 # Unet with one-hot label image and class weighted softmax
 def unet_weighted_softmax(class_weights=[]):
