@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO)
 train_path = './data/train'
 gt_path = './data/train_label'
 
-proc_src = lambda fn: cv2.cvtColor(cv2.imread(fn),cv2.COLOR_BGR2RGB)[np.newaxis,:]
+proc_src = lambda fn: np.transpose(cv2.cvtColor(cv2.imread(fn),cv2.COLOR_BGR2RGB), (2, 0, 1))
 proc_gt = lambda fn: cv2.cvtColor(cv2.imread(fn),cv2.COLOR_BGR2GRAY)[np.newaxis,:]
 imgs = np.array([proc_src(train_path+'/'+i) for i in os.listdir(train_path) if i.endswith('.png')],dtype=np.float32)
 gts = np.array([proc_gt(gt_path+'/'+i) for i in os.listdir(gt_path) if i.endswith('.png')],dtype=np.float32)
