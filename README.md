@@ -46,3 +46,4 @@ arXiv preprint arXiv:1505. 04597, 2015.
 - [ ] Train demo
 - [ ] Train from vgg model
 - [ ] Resum training
+- [ ] Automatic class weights statistic
