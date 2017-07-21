@@ -27,7 +27,7 @@ arXiv preprint arXiv:1505. 04597, 2015.
   python ./unet_train_class_weighted.py
   ```
 ### Testing
-  Change the image path to your own one in line 18 of unet_test.py, and simply run:
+  Change the image path to your own one in line 19 of unet_test.py, and simply run:
   ```
   python ./unet_test.py
   ```
