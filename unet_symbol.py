@@ -67,6 +67,8 @@ def unet_standard():
 def unet_weighted_softmax(class_weights=[]):
     conv_res, label = unet_base()
     
+    conv_res = mx.sym.softmax(conv_res, axis=1)
+    
     assert(len(class_weights)==2)
     w = mx.sym.Variable('w',shape=(1,2), init=MyConstant([class_weights]))
     w = mx.sym.BlockGrad(w)
