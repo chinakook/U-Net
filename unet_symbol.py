@@ -72,6 +72,8 @@ def unet_weighted_softmax(class_weights=[]):
     assert(len(class_weights)==2)
     w = mx.sym.Variable('w',shape=(1,2), init=MyConstant([class_weights]))
     w = mx.sym.BlockGrad(w)
+    # keep more stable log operation to avoid -inf result
+    conv_res = mx.sym.maximum(conv_res, 0.000001)
     ce = -mx.sym.mean(label*mx.sym.log(conv_res), axis=(2,3))
     ce = mx.sym.broadcast_mul(w, ce) # weighted cross entropy by channels multiplied with weights
     ce = mx.sym.MakeLoss(ce, name='loss')
