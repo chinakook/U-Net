@@ -18,7 +18,7 @@ class MyConstant(mx.init.Initializer):
 def unet_base():
     def Conv3(x, cn):
         x = nn.Conv2D(cn, 3, padding=1)(x)
-        x = nn.BatchNorm()(x)
+        x = mx.sym.BatchNorm(x, eps=0.0001, fix_gamma=False, use_global_stats=False)
         x = nn.Activation('relu')(x)
         return x
     
@@ -32,8 +32,14 @@ def unet_base():
         return x
     
     def up_block(x, s, cn): # s as sibling (i.e. down_block output)
-        x = nn.Conv2DTranspose(cn, 2, 2)(x)
+        # x = nn.Conv2DTranspose(cn, 2, 2)(x)
+        # x = nn.Activation('relu')(x)
+        
+        x = mx.sym.UpSampling(x, scale=2, sample_type='nearest')
+        x = nn.Conv2D(cn, 1)(x)
+        x = mx.sym.BatchNorm(x, eps=0.0001, fix_gamma=False, use_global_stats=False)
         x = nn.Activation('relu')(x)
+        
         # As the corresponding down_block output s is smaller, then crop x to the same size with s.
         # This will make the final output shape of unet be same to the data shape.
         x = mx.sym.Crop(*[x, s], center_crop=True)
