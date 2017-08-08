@@ -37,7 +37,7 @@ def unet_base():
         
         x = mx.sym.UpSampling(x, scale=2, sample_type='nearest')
         x = nn.Conv2D(cn, 1)(x)
-        x = mx.sym.BatchNorm(x, eps=0.0001, fix_gamma=False, use_global_stats=False)
+        x = mx.sym.BatchNorm(x, eps=0.0001, fix_gamma=False, use_global_stats=True)
         x = nn.Activation('relu')(x)
         
         # As the corresponding down_block output s is smaller, then crop x to the same size with s.
