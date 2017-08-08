@@ -18,7 +18,7 @@ class MyConstant(mx.init.Initializer):
 def unet_base():
     def Conv3(x, cn):
         x = nn.Conv2D(cn, 3, padding=1)(x)
-        x = mx.sym.BatchNorm(x, eps=0.0001, fix_gamma=False, use_global_stats=False)
+        x = mx.sym.BatchNorm(x, eps=0.0001, fix_gamma=False, use_global_stats=True)
         x = nn.Activation('relu')(x)
         return x
     
