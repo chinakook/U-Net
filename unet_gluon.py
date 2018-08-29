@@ -23,7 +23,7 @@ def ConvBlock(channels, kernel_size):
     out = nn.HybridSequential()
     #with out.name_scope():
     out.add(
-        nn.Conv2D(channels, kernel_size, padding=1, use_bias=False),
+        nn.Conv2D(channels, kernel_size, padding=kernel_size//2, use_bias=False),
         nn.BatchNorm(),
         nn.Activation('relu')
     )
@@ -258,7 +258,7 @@ my_train_aug = Compose([
 ])
 
 
-my_train = MyDataSet('/home/kk/data/ema', 'train', my_train_aug)
+my_train = MyDataSet('/home/kk/data/bbanno', 'train', my_train_aug)
 
 
 # my_val_aug = Compose([
@@ -269,7 +269,7 @@ my_train = MyDataSet('/home/kk/data/ema', 'train', my_train_aug)
 
 # my_val = MyDataSet('/home/kk/data/ema', 'train', my_val_aug)
 
-train_loader = DataLoader(my_train, batch_size=4, shuffle=True, last_batch='rollover')
+train_loader = DataLoader(my_train, batch_size=2, shuffle=True, last_batch='rollover')
 
 ctx = [mx.gpu(0)]
 
@@ -426,7 +426,7 @@ for epoch in range(num_epochs):
     print(epoch, t1-t0, total_loss, name, value)
 
 
-net.export('segnet')
+net.export('segnet_bb')
 
 # net.load_params('segnet.params', mx.gpu(0))
 

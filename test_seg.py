@@ -29,7 +29,7 @@ def get_segmentation_mod():
 
     sym, arg_params, aux_params = mx.model.load_checkpoint('./segnet', 0)
     mod = mx.mod.Module(symbol=sym, context=ctx, data_names=['data'], label_names=None)
-    mod.bind(for_training=False, data_shapes=[('data', (1,3,seg_data_shape,seg_data_shape))], label_shapes=None)
+    mod.bind(for_training=False, data_shapes=[('data', (1,3,360,480))], label_shapes=None)
     mod.set_params(arg_params=arg_params, aux_params=aux_params)
     return mod
 
