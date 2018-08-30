@@ -27,9 +27,9 @@ ctx = mx.gpu()
 
 def get_segmentation_mod():
 
-    sym, arg_params, aux_params = mx.model.load_checkpoint('./segnet', 0)
+    sym, arg_params, aux_params = mx.model.load_checkpoint('./segnet_bb', 0)
     mod = mx.mod.Module(symbol=sym, context=ctx, data_names=['data'], label_names=None)
-    mod.bind(for_training=False, data_shapes=[('data', (1,3,360,480))], label_shapes=None)
+    mod.bind(for_training=False, data_shapes=[('data', (1,3,512,512))], label_shapes=None)
     mod.set_params(arg_params=arg_params, aux_params=aux_params)
     return mod
 
@@ -46,7 +46,7 @@ def seg_img(img, mod):
     return pred
 
 if __name__ == "__main__":
-    testdir = r'/home/kk/data/ema/val/image'
+    testdir = r'/home/kk/data/bbanno/train/image'
    
 
     imgfiles = [i for i in os.listdir(testdir) if i.endswith('.png')]
@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     for i,fn in enumerate(imgfiles):
         fn_path = testdir+'/'+fn
-        raw_img = cv2.imdecode(np.fromfile(fn_path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
+        raw_img = cv2.imread(fn_path)
         pred = seg_img(raw_img, seg_mod)
 
         plt.subplot(121)

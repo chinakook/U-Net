@@ -143,24 +143,26 @@ class MyDataSet(Dataset):
             mask = np.bitwise_not(mask)
             lbl = np.bitwise_or(mask, lbl/255)
         else:
-            lbl = lbl # / 255
+            lbl = lbl / 255
 
         if self.transform is not None:
             img, lbl = self.transform(img, lbl)
 
+
+        weight = lbl * 500
         # plt.subplot(121)
         # plt.imshow(img[2].asnumpy())
         # plt.subplot(122)
-        # plt.imshow(lbl.asnumpy())
-        # plt.show()
+        # plt.imshow(lbl.asnumpy().astype(np.float32))
+        # plt.waitforbuttonpress()
         
-        return img, lbl
+        return img, lbl, weight
 
 
 class ToNDArray():
     def __call__(self, img, lbl):
         img = mx.nd.array(img)
-        lbl = mx.nd.array(lbl, dtype=np.int32)
+        lbl = mx.nd.array(lbl) #, dtype=np.int32)
         
         return img, lbl
 
@@ -269,7 +271,7 @@ my_train = MyDataSet('/home/kk/data/bbanno', 'train', my_train_aug)
 
 # my_val = MyDataSet('/home/kk/data/ema', 'train', my_val_aug)
 
-train_loader = DataLoader(my_train, batch_size=2, shuffle=True, last_batch='rollover')
+train_loader = DataLoader(my_train, batch_size=4, shuffle=True, last_batch='rollover')
 
 ctx = [mx.gpu(0)]
 
@@ -301,8 +303,8 @@ num_steps = len(my_train)/4
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {
     'learning_rate': 0.01,
     'wd': 0.0005,
-    'momentum': 0.9,
-    'lr_scheduler': PolyScheduler(1.0, 0.9, num_steps*100)
+    'momentum': 0.9#,
+    #'lr_scheduler': PolyScheduler(1.0, 0.9, num_steps*100)
 })
 
 criterion = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
@@ -399,20 +401,20 @@ for epoch in range(num_epochs):
     total_loss = 0
     for m in metrics:
         m.reset()
-    for data, label in train_loader:
+    for data, label, weight in train_loader:
         batch_size = data.shape[0]
         dlist = gluon.utils.split_and_load(data, ctx)
         llist = gluon.utils.split_and_load(label, ctx)
+        wlist = gluon.utils.split_and_load(weight, ctx)
         #mlist = [y!=255 for y in llist]
         with ag.record():
             #losses = [criterion(net(X), y, m) for X, y in zip(dlist, llist, mlist)]
             preds = [net(X) for X in dlist]
             losses = []
             for i in range(len(preds)):
-                l = criterion(preds[i], llist[i]) # , mlist[i])
+                l = criterion(preds[i], llist[i], wlist[i]) # , mlist[i])
                 losses.append(l)
-        for l in losses:
-            l.backward()
+                ag.backward(losses)
         total_loss += sum([l.sum().asscalar() for l in losses])
         trainer.step(batch_size)
         #print(label.shape, preds.shape)
@@ -427,29 +429,4 @@ for epoch in range(num_epochs):
 
 
 net.export('segnet_bb')
-
-# net.load_params('segnet.params', mx.gpu(0))
-
-# val_loader = DataLoader(my_train, batch_size=1, shuffle=True, last_batch='keep')
-
-# savedir = './res'
-
-
-# k = 0
-# for data, label in val_loader:
-#     batch_size = data.shape[0]
-#     #with ag.record(train_mode=True):
-#     output = net(data.as_in_context(mx.gpu(0)))
-#     output = output.asnumpy()
-    
-#     l = label.asnumpy()
-#     l = l == 1
-#     #print(l.shape)
-#     dataout = data.asnumpy()
-#     dataout = dataout[0,0] + 107
-#     dataout = dataout.astype(np.uint8)
-#     pred = np.argmax(output,axis=1)
-#     out = np.hstack((dataout, pred[0]*255, l[0]*255))
-#     cv2.imwrite(savedir + '/' + str(k)+'.png', out)
-#     k+=1
 
