@@ -17,93 +17,8 @@ import cv2
 
 import time
 
-
-
-def ConvBlock(channels, kernel_size):
-    out = nn.HybridSequential()
-    #with out.name_scope():
-    out.add(
-        nn.Conv2D(channels, kernel_size, padding=kernel_size//2, use_bias=False),
-        nn.BatchNorm(),
-        nn.Activation('relu')
-    )
-    return out
-
-def down_block(channels):
-    out = nn.HybridSequential()
-    #with out.name_scope():
-    out.add(
-        ConvBlock(channels, 3),
-        ConvBlock(channels, 3)
-    )
-    return out
-
-
-class up_block(nn.HybridBlock):
-    def __init__(self, channels, shrink=True, **kwargs):
-        super(up_block, self).__init__(**kwargs)
-        #with self.name_scope():
-        self.upsampler = nn.Conv2DTranspose(channels=channels, kernel_size=4, strides=2, 
-                                            padding=1, use_bias=False) #, groups=channels, weight_initializer=mx.init.Bilinear())
-        #self.upsampler.collect_params().setattr('lr_mult', 0.)
-
-        self.conv1 = ConvBlock(channels, 1)
-        self.conv3_0 = ConvBlock(channels, 3)
-        if shrink:
-            self.conv3_1 = ConvBlock(channels // 2, 3)
-        else:
-            self.conv3_1 = ConvBlock(channels, 3)
-    def hybrid_forward(self, F, x, s):
-        x = self.upsampler(x)
-        x = self.conv1(x)
-        x = F.relu(x)
-        
-        x = F.Crop(*[x,s], center_crop=True)
-        x = F.concat(s,x, dim=1)
-        #x = s + x
-        x = self.conv3_0(x)
-        x = self.conv3_1(x)
-        return x
-
-class Segnet(nn.HybridBlock):
-    def __init__(self, **kwargs):
-        super(Segnet, self).__init__(**kwargs)
-        with self.name_scope():
-            self.d0 = down_block(64)
-            
-            self.d1 = nn.HybridSequential()
-            self.d1.add(nn.MaxPool2D(2,2,ceil_mode=True), down_block(128))
-            
-            self.d2 = nn.HybridSequential()
-            self.d2.add(nn.MaxPool2D(2,2,ceil_mode=True), down_block(256))
-            
-            self.d3 = nn.HybridSequential()
-            self.d3.add(nn.MaxPool2D(2,2,ceil_mode=True), down_block(512))
-            
-            self.d4 = nn.HybridSequential()
-            self.d4.add(nn.MaxPool2D(2,2,ceil_mode=True), down_block(1024))
-            
-            self.u3 = up_block(512, shrink=True)
-            self.u2 = up_block(256, shrink=True)
-            self.u1 = up_block(128, shrink=True)
-            self.u0 = up_block(64, shrink=False)
-            
-            self.conv = nn.Conv2D(2,1)
-    def hybrid_forward(self, F, x):
-        x0 = self.d0(x)
-        x1 = self.d1(x0)
-        x2 = self.d2(x1)
-        x3 = self.d3(x2)
-        x4 = self.d4(x3)
-
-        y3 = self.u3(x4,x3)
-        y2 = self.u2(y3,x2)
-        y1 = self.u1(y2,x1)
-        y0 = self.u0(y1,x0)
-        
-        out = self.conv(y0)
-        
-        return out
+from model_unet import UNet
+from model_dilated_unet import DilatedUNet
         
 
 class MyDataSet(Dataset):
@@ -149,7 +64,7 @@ class MyDataSet(Dataset):
             img, lbl = self.transform(img, lbl)
 
 
-        weight = lbl * 500
+        weight = lbl * 1.0
         # plt.subplot(121)
         # plt.imshow(img[2].asnumpy())
         # plt.subplot(122)
@@ -192,8 +107,8 @@ class Resize:
         self.h = h
         
     def __call__(self, img, lbl):
-        img = cv2.resize(img, (w,h), 0, 0, cv2.INTER_LINEAR)
-        lbl = cv2.resize(lbl, (w,h), 0, 0, cv2.INTER_NEAREST)
+        img = cv2.resize(img, (self.w, self.h), 0, 0, cv2.INTER_LINEAR)
+        lbl = cv2.resize(lbl, (self.w, self.h), 0, 0, cv2.INTER_NEAREST)
         
         return img, lbl
 
@@ -275,36 +190,27 @@ train_loader = DataLoader(my_train, batch_size=4, shuffle=True, last_batch='roll
 
 ctx = [mx.gpu(0)]
 
-net = Segnet()
+net = DilatedUNet()
 net.hybridize()
 
 net.collect_params().initialize(ctx=ctx)
 
 
 
-# x = mx.sym.var('data')
-# y = net(x)
+x = mx.sym.var('data')
+y = net(x)
 
-# mx.viz.plot_network(y,shape={'data':(8,3,500,500)}, node_attrs={'shape':'oval','fixedsize':'fasl==false'}).view()
+mx.viz.plot_network(y,shape={'data':(8,3,500,500)}, node_attrs={'shape':'oval','fixedsize':'fasl==false'}).view()
+exit(0)
 
+num_epochs = 100
+num_steps = len(my_train) // 4
 
-
-class PolyScheduler(mx.lr_scheduler.LRScheduler):
-    def __init__(self, base_lr, lr_power, total_steps):
-        super(PolyScheduler, self).__init__(base_lr=base_lr)
-        self.lr_power = lr_power
-        self.total_steps = total_steps
-
-    def __call__(self, num_update):
-        lr = self.base_lr * ((1 - float(num_update)/self.total_steps) ** self.lr_power)
-        return lr
-
-num_steps = len(my_train)/4
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {
     'learning_rate': 0.01,
     'wd': 0.0005,
-    'momentum': 0.9#,
-    #'lr_scheduler': PolyScheduler(1.0, 0.9, num_steps*100)
+    'momentum': 0.9,
+    'lr_scheduler': mx.lr_scheduler.PolyScheduler(num_steps * num_epochs, 0.01,  2)
 })
 
 criterion = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
@@ -395,7 +301,6 @@ class SegMetric(mx.metric.EvalMetric):
 
 metrics = [SegMetric(use_mask=False)]
 
-num_epochs = 100
 for epoch in range(num_epochs):
     t0 = time.time()
     total_loss = 0
