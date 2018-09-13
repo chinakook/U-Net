@@ -33,25 +33,35 @@ class DilatedUNet(nn.HybridBlock):
             self.d2 = nn.HybridSequential()
             self.d2.add(nn.MaxPool2D(2,2,ceil_mode=True), down_block(first_channels*2**2))
             
-            self.d3 = nn.HybridSequential()
-            self.d3.add(nn.MaxPool2D(2,2,ceil_mode=True), down_block(first_channels*2**3))
+            self.bottlenect = nn.HybridSequential()
+            self.bottlenect.add(
+                nn.MaxPool2D(2,2,ceil_mode=True)
+                , BottleNectPath(filters=first_channels*2**3, bottleneck_depth=6)
+                )
             
-            self.bottlenect = BottleNectPath(filters=first_channels*2**3, bottleneck_depth=6)
-
             self.u2 = up_block(first_channels*2**2, shrink=True)
             self.u1 = up_block(first_channels*2, shrink=True)
             self.u0 = up_block(first_channels, shrink=False)
             
             self.conv = nn.Conv2D(2,1)
     def hybrid_forward(self, F, x):
-        x0 = self.d0(x)
-        x1 = self.d1(x0)
-        x2 = self.d2(x1)
-        x3 = self.d3(x2)
-        b = self.bottlenect(x3)
+        # x => 512
 
-        y2 = self.u2(b,x3)
-        y1 = self.u1(y2,x2)
+        # x0 => 512
+        x0 = self.d0(x)
+
+        # x1 => 256
+        x1 = self.d1(x0)
+
+        # x2 => 128
+        x2 = self.d2(x1)
+
+        # b => 64
+        b = self.bottlenect(x2)
+
+
+        y2 = self.u2(b,x2)
+        y1 = self.u1(y2,x1)
         y0 = self.u0(y1,x0)
         
         out = self.conv(y0)

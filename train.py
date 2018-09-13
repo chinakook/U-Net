@@ -197,11 +197,11 @@ net.collect_params().initialize(ctx=ctx)
 
 
 
-x = mx.sym.var('data')
-y = net(x)
+# x = mx.sym.var('data')
+# y = net(x)
 
-mx.viz.plot_network(y,shape={'data':(8,3,500,500)}, node_attrs={'shape':'oval','fixedsize':'fasl==false'}).view()
-exit(0)
+# mx.viz.plot_network(y,shape={'data':(8,3,500,500)}, node_attrs={'shape':'oval','fixedsize':'fasl==false'}).view()
+# exit(0)
 
 num_epochs = 100
 num_steps = len(my_train) // 4
