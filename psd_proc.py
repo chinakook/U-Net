@@ -22,9 +22,9 @@ def parse_psd(fn):
         return bgimg, fgimg
 
 
-psddir = '/home/kk/data/bbanno'
+psddir = '/mnt/15F1B72E1A7798FD/DK2/bbanno'
 psdfiles = [_  for _ in os.listdir(psddir) if _.endswith('.psd')]
-savedir = '/home/kk/data/bbanno/train'
+savedir = '/mnt/15F1B72E1A7798FD/DK2/bbanno/train'
 
 save_image_dir = savedir + '/image'
 save_label_dir = savedir + '/label'

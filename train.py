@@ -52,6 +52,15 @@ class MyDataSet(Dataset):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         
         lbl = cv2.imread(lbl_path, cv2.IMREAD_GRAYSCALE)
+
+        all_count = np.prod(lbl.shape)
+        fg_count = np.count_nonzero(lbl)
+        bg_count = all_count - fg_count
+        alpha = 1. / fg_count
+        beta = 1. / bg_count
+        
+        alpha = alpha / (alpha + beta)
+        beta = beta / (alpha + beta)
         
         if self._use_mask:
             mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
@@ -64,7 +73,7 @@ class MyDataSet(Dataset):
             img, lbl = self.transform(img, lbl)
 
 
-        weight = lbl * 1.0
+        weight = lbl * alpha + (1 - lbl) * beta
         # plt.subplot(121)
         # plt.imshow(img[2].asnumpy())
         # plt.subplot(122)
@@ -175,7 +184,7 @@ my_train_aug = Compose([
 ])
 
 
-my_train = MyDataSet('/home/kk/data/bbanno', 'train', my_train_aug)
+my_train = MyDataSet('/mnt/15F1B72E1A7798FD/DK2/bbanno', 'train', my_train_aug)
 
 
 # my_val_aug = Compose([
@@ -186,9 +195,9 @@ my_train = MyDataSet('/home/kk/data/bbanno', 'train', my_train_aug)
 
 # my_val = MyDataSet('/home/kk/data/ema', 'train', my_val_aug)
 
-train_loader = DataLoader(my_train, batch_size=4, shuffle=True, last_batch='rollover')
+train_loader = DataLoader(my_train, batch_size=8, shuffle=True, last_batch='rollover')
 
-ctx = [mx.gpu(0)]
+ctx = [mx.gpu(1), mx.gpu(2)]
 
 net = DilatedUNet()
 net.hybridize()
@@ -203,14 +212,14 @@ net.collect_params().initialize(ctx=ctx)
 # mx.viz.plot_network(y,shape={'data':(8,3,500,500)}, node_attrs={'shape':'oval','fixedsize':'fasl==false'}).view()
 # exit(0)
 
-num_epochs = 100
-num_steps = len(my_train) // 4
+num_epochs = 180
+num_steps = len(my_train) // 8
 
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {
-    'learning_rate': 0.01,
+    'learning_rate': 0.1,
     'wd': 0.0005,
     'momentum': 0.9,
-    'lr_scheduler': mx.lr_scheduler.PolyScheduler(num_steps * num_epochs, 0.01,  2)
+    'lr_scheduler': mx.lr_scheduler.PolyScheduler(num_steps * num_epochs, 0.1,  2, 0.0001)
 })
 
 criterion = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
@@ -319,7 +328,7 @@ for epoch in range(num_epochs):
             for i in range(len(preds)):
                 l = criterion(preds[i], llist[i], wlist[i]) # , mlist[i])
                 losses.append(l)
-                ag.backward(losses)
+            ag.backward(losses)
         total_loss += sum([l.sum().asscalar() for l in losses])
         trainer.step(batch_size)
         #print(label.shape, preds.shape)
