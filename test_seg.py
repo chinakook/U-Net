@@ -20,10 +20,10 @@ Batch = namedtuple('Batch', ['data'])
 
 seg_data_shape = 512
 
-cls_mean_val = np.array([[[127]],[[127]],[[127]]])
+cls_mean_val = np.array([[[107]],[[107]],[[107]]])
 cls_std_scale = 1.0
 
-ctx = mx.gpu()
+ctx = mx.gpu(1)
 
 def get_segmentation_mod():
 
@@ -46,8 +46,8 @@ def seg_img(img, mod):
     return pred
 
 if __name__ == "__main__":
-    testdir = r'/home/kk/data/bbanno/train/image'
-   
+    testdir = r'/mnt/15F1B72E1A7798FD/DK2/bbanno/train/image'
+    savedir = r'/mnt/15F1B72E1A7798FD/DK2/bbanno/res'
 
     imgfiles = [i for i in os.listdir(testdir) if i.endswith('.png')]
 
@@ -62,4 +62,5 @@ if __name__ == "__main__":
         plt.imshow(raw_img)
         plt.subplot(122)
         plt.imshow(pred)
-        plt.waitforbuttonpress()
+        plt.savefig(savedir +'/%d.png' % i)
+        #plt.waitforbuttonpress()
