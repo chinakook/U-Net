@@ -1,5 +1,5 @@
 # U-Net-MX
-**This is an Gluon reimplementation of [U-Net](http://lmb.informatik.uni-freiburg.de/people/ronneber/u-net).**
+**This is an Gluon reimplementation of [U-Net](http://lmb.informatik.uni-freiburg.de/people/ronneber/u-net) and [DilatedUNet](https://github.com/lyakaap/Kaggle-Carvana-3rd-Place-Solution).**
 See the following references for more information:
 ```
 "U-Net: Convolutional Networks for Biomedical Image Segmentation."
